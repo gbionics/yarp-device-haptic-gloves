@@ -321,7 +321,7 @@ bool ManusGlove::ManusGloveImpl::update()
 
     //The first half of the humanJointState vector is for the modified joint values after applying the coupling matrix
     //The second part is for the raw joint values as received from the glove (in degrees)
-    size_t numJoints = humanJointNameList.size() / 2;
+    size_t numJoints = humanJointNameList.size();
     Eigen::Map<Eigen::VectorXd> humanJointStateEigen(humanJointState.data(), numJoints);
     Eigen::Map<Eigen::VectorXd> humanJointStateRawEigen(humanJointState.data() + numJoints, numJoints);
     Eigen::Map<Eigen::VectorXd> humanJointStateDegEigen(humanJointStateDeg.data(), humanJointStateDeg.size());
