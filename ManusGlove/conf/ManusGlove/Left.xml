@@ -75,11 +75,11 @@
                 0.0,
                 0.0)
         </param>
-        <param name="palm_frame_name">left_hand</param>
+        <param name="palm_frame_name">left_glove</param>
         <param name="palm_transform">
-            (  1.0,  0.0,  0.0,  0.0,
-               0.0,  1.0,  0.0,  0.0,
-               0.0,  0.0,  1.0,  0.0,
+            (  0.0, -1.0,  0.0,  0.0,
+              -1.0,  0.0,  0.0,  0.0,
+               0.0,  0.0, -1.0,  0.0,
                0.0,  0.0,  0.0,  1.0)
         </param>
 
