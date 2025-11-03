@@ -91,6 +91,8 @@ public:
     std::vector<std::pair<std::string, Eigen::Matrix4f>> humanFingerTransforms;
     yarp::sig::Matrix transformBuffer;
 
+    bool publishRawData = false;
+
     // Constructor
     ManusGloveImpl();
 
@@ -262,6 +264,9 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     ss_vector << std::endl << offsetVector;
     yInfo() << LogPrefix << "offset vector: " << ss_vector.str();
 
+    publishRawData = config.check("publish_raw_data", yarp::os::Value(false)).asBool();
+    yInfo() << LogPrefix << "publish_raw_data: " << (publishRawData ? "true" : "false");
+
 // TODO: Add a check if there is no glove connected!
     if (!pGlove->Initialize(hostType))
     {
@@ -276,7 +281,12 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
         return false;
     }
 
-    humanJointState.resize(humanJointNameList.size() * 2, 0);
+    size_t stateJoints = humanJointNameList.size();
+    if (publishRawData)
+    {
+        stateJoints *= 2; // For raw joint values
+    }
+    humanJointState.resize(stateJoints, 0);
     humanJointStateDeg.resize(humanJointNameList.size(), 0);
 
     palmFrameName = config.check("palm_frame_name", yarp::os::Value("")).asString();
@@ -323,12 +333,17 @@ bool ManusGlove::ManusGloveImpl::update()
     //The second part is for the raw joint values as received from the glove (in degrees)
     size_t numJoints = humanJointNameList.size();
     Eigen::Map<Eigen::VectorXd> humanJointStateEigen(humanJointState.data(), numJoints);
-    Eigen::Map<Eigen::VectorXd> humanJointStateRawEigen(humanJointState.data() + numJoints, numJoints);
     Eigen::Map<Eigen::VectorXd> humanJointStateDegEigen(humanJointStateDeg.data(), humanJointStateDeg.size());
 
     // Apply the coupling matrix and offset vector
     humanJointStateEigen = couplingMatrix * humanJointStateDegEigen + offsetVector;
-    humanJointStateRawEigen = humanJointStateDegEigen;
+
+    if (publishRawData)
+    {
+        // The second half of the humanJointState vector is for the raw joint values
+        Eigen::Map<Eigen::VectorXd> humanJointStateRawEigen(humanJointState.data() + numJoints, numJoints);
+        humanJointStateRawEigen = humanJointStateDegEigen;
+    }
 
     for (size_t i = 0; i < numJoints; i++)
     {
@@ -405,11 +420,15 @@ bool ManusGlove::open(yarp::os::Searchable& config)
         pImpl->manusGloveJointSensorVector.push_back(std::make_shared<ManusGloveImpl::ManusGloveVirtualJointKinSensor>(pImpl.get(), i, pImpl->jointSensorPrefix + pImpl->humanJointNameList[i]));
     }
 
-    //Add the virtual joint sensors for the raw joint values
-    std::string rawJointSensorPrefix = pImpl->jointSensorPrefix + "raw_deg" + wearable::Separator;
-    for (int i = 0; i < pImpl->humanJointNameList.size(); i++)
+
+    if (pImpl->publishRawData)
     {
-        pImpl->manusGloveJointSensorVector.push_back(std::make_shared<ManusGloveImpl::ManusGloveVirtualJointKinSensor>(pImpl.get(), i + pImpl->humanJointNameList.size(), rawJointSensorPrefix + pImpl->humanJointNameList[i]));
+        //Add the virtual joint sensors for the raw joint values
+        std::string rawJointSensorPrefix = pImpl->jointSensorPrefix + "raw_deg" + wearable::Separator;
+        for (int i = 0; i < pImpl->humanJointNameList.size(); i++)
+        {
+            pImpl->manusGloveJointSensorVector.push_back(std::make_shared<ManusGloveImpl::ManusGloveVirtualJointKinSensor>(pImpl.get(), i + pImpl->humanJointNameList.size(), rawJointSensorPrefix + pImpl->humanJointNameList[i]));
+        }
     }
 
     // Create Virtual Link Sensors
