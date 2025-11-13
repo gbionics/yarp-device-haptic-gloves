@@ -7,6 +7,7 @@
         <param name="wearableName">HapticGlove</param>
         <param name="is_right_hand">false</param>
         <param name="is_local_host">true</param>
+        <param name="publish_raw_data">true</param>
         <param name="human_joint_list">( "l_thumb_oppose", "l_thumb_proximal", "l_thumb_middle", "l_thumb_distal",
                                          "l_index_abduction", "l_index_proximal", "l_index_middle", "l_index_distal",
                                          "l_middle_abduction", "l_middle_proximal", "l_middle_middle", "l_middle_distal",
@@ -74,11 +75,11 @@
                 0.0,
                 0.0)
         </param>
-        <param name="palm_frame_name">left_hand</param>
+        <param name="palm_frame_name">left_glove</param>
         <param name="palm_transform">
-            (  1.0,  0.0,  0.0,  0.0,
-               0.0,  1.0,  0.0,  0.0,
-               0.0,  0.0,  1.0,  0.0,
+            (  0.0, -1.0,  0.0,  0.0,
+              -1.0,  0.0,  0.0,  0.0,
+               0.0,  0.0, -1.0,  0.0,
                0.0,  0.0,  0.0,  1.0)
         </param>
 

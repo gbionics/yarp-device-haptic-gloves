@@ -381,6 +381,11 @@ bool manusGlove::ManusGloveHelper::getHandRawSkeleton(std::vector<std::pair<std:
         std::string side = ConvertSideToString(nodeInfo.side);
         std::string chainType = ConvertChainTypeToString(nodeInfo.chainType);
         std::string jointType = ConvertFingerJointTypeToString(nodeInfo.fingerJointType);
+        if (nodeInfo.chainType == ChainType_Hand && nodeInfo.fingerJointType == FingerJointType_Invalid)
+        {
+            // Avoid using "Invalid" in the joint name
+            jointType = "Manus";
+        }
         p_SkeletonData[i].first = side + chainType + jointType;
         p_SkeletonData[i].second = ManusTransformToEigen(node.transform);
     }
