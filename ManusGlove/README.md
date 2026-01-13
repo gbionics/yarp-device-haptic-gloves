@@ -8,7 +8,7 @@
 
 ```bash
 set ManusGlove_DIR=C:\ManusGlove-API\SDKClient\SDKClient_Windows
-set PATH=%PATH%:%ManusGlove_DIR%\ManusSDK\lib
+set PATH=%PATH%;%ManusGlove_DIR%\ManusSDK\lib
 ```
 ### Manus Core
 - Download and install the Manus Core from [here](https://www.manus-meta.com/resources/downloads/quantum-metagloves).
