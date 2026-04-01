@@ -267,7 +267,6 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     publishRawData = config.check("publish_raw_data", yarp::os::Value(false)).asBool();
     yInfo() << LogPrefix << "publish_raw_data: " << (publishRawData ? "true" : "false");
 
-// TODO: Add a check if there is no glove connected!
     if (!pGlove->Initialize(hostType))
     {
         yError() << LogPrefix << "Failed to initialize the ManusGloveHelper on the" << handSideLogPrefix << "hand.";
@@ -327,7 +326,11 @@ bool ManusGlove::ManusGloveImpl::update()
     std::lock_guard<std::mutex> lock(mutex);
 
 
-    pGlove->getHandJointPosition(humanJointStateDeg, handSide);
+    if (!pGlove->getHandJointPosition(humanJointStateDeg, handSide))
+    {
+        yError() << LogPrefix << "Failed to get hand joint position. Skipping iteration";
+		return true; // Return true to keep the thread running, we can try to get the data in the next iteration.
+    }
 
     //The first half of the humanJointState vector is for the modified joint values after applying the coupling matrix
     //The second part is for the raw joint values as received from the glove (in degrees)
