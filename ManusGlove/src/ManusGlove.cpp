@@ -36,7 +36,6 @@
 #include <Eigen/Core>
 
 const std::string DeviceName = "ManusGlove";
-const std::string LogPrefix = DeviceName + wearable::Separator;
 
 using namespace wearable;
 using namespace wearable::devices;
@@ -94,6 +93,8 @@ public:
 
     bool publishRawData = false;
 
+    std::string logPrefix = DeviceName + wearable::Separator;
+
     // Constructor
     ManusGloveImpl();
 
@@ -134,6 +135,8 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
         handSideLogPrefix = "Left";
     }
 
+	logPrefix += handSideLogPrefix + " hand: ";
+
 
     // Choose the host type: Remote/Local
     if (!config.check("is_local_host"))
@@ -146,12 +149,12 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     hostType = isLocalHost;
 
     useManusCore = config.check("use_manus_core", yarp::os::Value(true)).asBool();
-    yInfo() << LogPrefix << "use_manus_core: " << (useManusCore ? "true" : "false");
+    yInfo() << logPrefix << "use_manus_core: " << (useManusCore ? "true" : "false");
 
     // Get Human Joint Names
     yarp::os::Bottle* jointListYarp;
     if (!(config.check("human_joint_list") && config.find("human_joint_list").isList())) {
-        yError() << LogPrefix << "Unable to find human_joint_list in the config file.";
+        yError() << logPrefix << "Unable to find human_joint_list in the config file.";
         return false;
     }
     jointListYarp = config.find("human_joint_list").asList();
@@ -159,21 +162,20 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     for (size_t i = 0; i < jointListYarp->size(); i++) {
         humanJointNameList.push_back(jointListYarp->get(i).asString());
     }
-    yInfo() << LogPrefix << "human joint names: " << humanJointNameList;
+    yInfo() << logPrefix << "human joint names: " << humanJointNameList;
 
     // Get human hand link name
     if (!(config.check("hand_link") && config.find("hand_link").isString())) {
-        yError() << LogPrefix << "Unable to find hand_link in the config file.";
+        yError() << logPrefix << "Unable to find hand_link in the config file.";
         return false;
     }
     humanHandLinkName = config.find("hand_link").asString();
-    yInfo() << LogPrefix << "human hand link name: " << humanHandLinkName;
-
+    yInfo() << logPrefix << "human hand link name: " << humanHandLinkName;
     // Get human hand finger names
     yarp::os::Bottle* fingerListYarp;
     if (!(config.check("human_finger_list") && config.find("human_finger_list").isList()))
     {
-        yError() << LogPrefix << "Unable to find human_finger_list in the config file.";
+        yError() << logPrefix << "Unable to find human_finger_list in the config file.";
         return false;
     }
     fingerListYarp = config.find("human_finger_list").asList();
@@ -182,7 +184,7 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     {
         humanFingerNames.push_back(fingerListYarp->get(i).asString());
     }
-    yInfo() << LogPrefix << "human finger names: " << humanFingerNames;
+    yInfo() << logPrefix << "human finger names: " << humanFingerNames;
 
 
     // Get Robot Joint limit
@@ -190,14 +192,14 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     yarp::os::Bottle* robotJointLimitMinYarp;
     if (!(config.check("min_joint_limit_deg")) || !config.find("min_joint_limit_deg").isList())
     {
-        yError()<<LogPrefix<<"couldn't find min_joint_limit_deg.";
+        yError()<<logPrefix<<"couldn't find min_joint_limit_deg.";
         return false;
     }
     robotJointLimitMinYarp = config.find("min_joint_limit_deg").asList();
 
     if (robotJointLimitMinYarp->size() != humanJointNameList.size())
     {
-        yError() << LogPrefix << "min_joint_limit_deg size is not equal to human_joint_list size.";
+        yError() << logPrefix << "min_joint_limit_deg size is not equal to human_joint_list size.";
         return false;
     }
 
@@ -205,14 +207,14 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     yarp::os::Bottle* robotJointLimitMaxYarp;
     if (!(config.check("max_joint_limit_deg")) || !config.find("max_joint_limit_deg").isList())
     {
-        yError()<<LogPrefix<<"couldn't find max_joint_limit_deg.";
+        yError()<< logPrefix <<"couldn't find max_joint_limit_deg.";
         return false;
     }
     robotJointLimitMaxYarp = config.find("max_joint_limit_deg").asList();
 
     if (robotJointLimitMaxYarp->size() != humanJointNameList.size())
     {
-        yError() << LogPrefix << "max_joint_limit_deg size is not equal to human_joint_list size.";
+        yError() << logPrefix << "max_joint_limit_deg size is not equal to human_joint_list size.";
         return false;
     }
 
@@ -225,13 +227,13 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     yarp::os::Bottle* couplingMatrixYarp;
     if (!(config.check("coupling_matrix")) || !config.find("coupling_matrix").isList())
     {
-        yError() << LogPrefix << "couldn't find coupling_matrix.";
+        yError() << logPrefix << "couldn't find coupling_matrix.";
         return false;
     }
     couplingMatrixYarp = config.find("coupling_matrix").asList();
     if (couplingMatrixYarp->size() != humanJointNameList.size() * humanJointNameList.size())
     {
-        yError() << LogPrefix << "coupling_matrix size is supposed to be a square matrix with number of rows/cols equal to the number of joints.";
+        yError() << logPrefix << "coupling_matrix size is supposed to be a square matrix with number of rows/cols equal to the number of joints.";
         return false;
     }
     couplingMatrix.resize(humanJointNameList.size(), humanJointNameList.size());
@@ -244,19 +246,19 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     }
     std::stringstream ss_matrix;
     ss_matrix << std::endl << couplingMatrix;
-    yInfo() << LogPrefix << "coupling matrix: " << ss_matrix.str();
+    yInfo() << logPrefix << "coupling matrix: " << ss_matrix.str();
 
     //Parse the offset vector
     yarp::os::Bottle* offsetVectorYarp;
     if (!(config.check("offset_vector_deg")) || !config.find("offset_vector_deg").isList())
     {
-        yError() << LogPrefix << "couldn't find offset_vector_deg.";
+        yError() << logPrefix << "couldn't find offset_vector_deg.";
         return false;
     }
     offsetVectorYarp = config.find("offset_vector_deg").asList();
     if (offsetVectorYarp->size() != humanJointNameList.size())
     {
-        yError() << LogPrefix << "offset_vector_deg size is not equal to the number of joints.";
+        yError() << logPrefix << "offset_vector_deg size is not equal to the number of joints.";
         return false;
     }
     offsetVector.resize(humanJointNameList.size());
@@ -266,21 +268,21 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     }
     std::stringstream ss_vector;
     ss_vector << std::endl << offsetVector;
-    yInfo() << LogPrefix << "offset vector: " << ss_vector.str();
+    yInfo() << logPrefix << "offset vector: " << ss_vector.str();
 
     publishRawData = config.check("publish_raw_data", yarp::os::Value(false)).asBool();
-    yInfo() << LogPrefix << "publish_raw_data: " << (publishRawData ? "true" : "false");
+    yInfo() << logPrefix << "publish_raw_data: " << (publishRawData ? "true" : "false");
 
     if (!pGlove->Initialize(hostType, useManusCore))
     {
-        yError() << LogPrefix << "Failed to initialize the ManusGloveHelper on the" << handSideLogPrefix << "hand.";
+        yError() << logPrefix << "Failed to initialize the ManusGloveHelper on the" << handSideLogPrefix << "hand.";
         return false;
     }
-    yInfo() << LogPrefix << "ManusGloveHelper initialized successfully on the" << handSideLogPrefix << "hand.";
+    yInfo() << logPrefix << "ManusGloveHelper initialized successfully on the" << handSideLogPrefix << "hand.";
 
     if (!pGlove->SetHandJoints(humanJointNameList, handSide))
     {
-        yError() << LogPrefix << "Failed to set the hand joints.";
+        yError() << logPrefix << "Failed to set the hand joints.";
         return false;
     }
 
@@ -303,13 +305,13 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     {
         if (!config.find(palmTransformName).isList())
         {
-            yError() << LogPrefix << "The palm_transform matrix should be a list!";
+            yError() << logPrefix << "The palm_transform matrix should be a list!";
             return false;
         }
         yarp::os::Bottle* palmTransformBottle = config.find(palmTransformName).asList();
         if (palmTransformBottle->size() != 16)
         {
-            yError() << LogPrefix << "The size of the palm_transform matrix is suposed to be 16! (size:"
+            yError() << logPrefix << "The size of the palm_transform matrix is suposed to be 16! (size:"
                 << palmTransformBottle->size() << ")";
             return false;
         }
@@ -332,7 +334,7 @@ bool ManusGlove::ManusGloveImpl::update()
 
     if (!pGlove->getHandJointPosition(humanJointStateDeg, handSide))
     {
-        yWarningThrottle(5) << LogPrefix << "Failed to get hand joint position. Skipping iteration";
+        yWarningThrottle(5) << logPrefix << "Failed to get hand joint position. Skipping iteration";
 		return true; // Return true to keep the thread running, we can try to get the data in the next iteration.
     }
 
@@ -376,7 +378,7 @@ bool ManusGlove::ManusGloveImpl::update()
             bool ok = frameTransformInterface->setTransform(humanFingerTransforms[i].first, palmFrameName, transformBuffer);
             if (!ok)
             {
-                yWarning() << LogPrefix << "Failed to set transform for finger: " << humanFingerTransforms[i].first;
+                yWarning() << logPrefix << "Failed to set transform for finger: " << humanFingerTransforms[i].first;
             }
         }
     }
@@ -387,7 +389,7 @@ bool ManusGlove::ManusGloveImpl::update()
 bool ManusGlove::ManusGloveImpl::close()
 {
     pGlove->ShutDown();
-    yInfo() << LogPrefix << "Core closed successfully.";
+    yInfo() << logPrefix << "Core closed successfully.";
     return true;
 }
 
@@ -405,17 +407,17 @@ bool ManusGlove::open(yarp::os::Searchable& config)
 
     // Check the device name
     if (!(config.check("wearableName") && config.find("wearableName").isString())) {
-        yInfo() << LogPrefix << "Using default wearable name ManusGlove";
+        yInfo() << pImpl->logPrefix << "Using default wearable name ManusGlove";
         pImpl->wearableName = DeviceName;
     }
     else {
         pImpl->wearableName = config.find("wearableName").asString();
-        yInfo() << LogPrefix << "Using the wearable name " << pImpl->wearableName;
+        yInfo() << pImpl->logPrefix << "Using the wearable name " << pImpl->wearableName;
     }
 
     // Configure the implementation class
     if (!pImpl->open(config)) {
-        yError() << LogPrefix << "Cannot configure the implementation class";
+        yError() << pImpl->logPrefix << "Cannot configure the implementation class";
         return false;
     }
 
@@ -456,7 +458,7 @@ bool ManusGlove::open(yarp::os::Searchable& config)
 
     // Start the PeriodicThread loop
     if (!start()) {
-        yError() << LogPrefix << "Failed to start the period thread.";
+        yError() << pImpl->logPrefix << "Failed to start the period thread.";
         return false;
     }
 
@@ -598,12 +600,12 @@ void ManusGlove::run()
 bool wearable::devices::ManusGlove::attach(yarp::dev::PolyDriver* poly)
 {
     if (!poly) {
-        yError() << LogPrefix << "Passed PolyDriver is nullptr";
+        yError() << pImpl->logPrefix << "Passed PolyDriver is nullptr";
         return false;
     }
 
     if (!(poly->view(pImpl->frameTransformInterface) && pImpl->frameTransformInterface)) {
-        yError() << LogPrefix << "Failed to view the IFrameTransform interface from the PolyDriver";
+        yError() << pImpl->logPrefix << "Failed to view the IFrameTransform interface from the PolyDriver";
         return false;
     }
 
@@ -619,14 +621,14 @@ bool wearable::devices::ManusGlove::detach()
 bool wearable::devices::ManusGlove::attachAll(const yarp::dev::PolyDriverList& driverList)
 {
     if (driverList.size() > 1) {
-        yError() << LogPrefix << "This wrapper accepts only one attached PolyDriver";
+        yError() << pImpl->logPrefix << "This wrapper accepts only one attached PolyDriver";
         return false;
     }
 
     const yarp::dev::PolyDriverDescriptor* driver = driverList[0];
 
     if (!driver) {
-        yError() << LogPrefix << "Passed PolyDriverDescriptor is nullptr";
+        yError() << pImpl->logPrefix << "Passed PolyDriverDescriptor is nullptr";
         return false;
     }
 
@@ -651,12 +653,11 @@ bool ManusGlove::close()
     yDebug()<<"Thread stopped ";
 
     if (!pImpl->close()) {
-        yError() << LogPrefix << "Cannot close correctly the manus glove implementation.";
+        yError() << pImpl->logPrefix << "Cannot close correctly the manus glove implementation.";
         return false;
     }
 
-    yDebug()<<"end of closing ";
-
+    yDebug()<<pImpl->logPrefix<<"end of closing ";
     return true;
 }
 
@@ -710,7 +711,7 @@ ManusGlove::getSensor(const wearable::sensor::SensorName name) const
             return s;
         }
     }
-    yWarning() << LogPrefix << "User specified name <" << name << "> not found";
+    yWarning() << pImpl->logPrefix << "User specified name <" << name << "> not found";
     return nullptr;
 }
 
