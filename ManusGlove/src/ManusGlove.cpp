@@ -332,7 +332,7 @@ bool ManusGlove::ManusGloveImpl::update()
 
     if (!pGlove->getHandJointPosition(humanJointStateDeg, handSide))
     {
-        yError() << LogPrefix << "Failed to get hand joint position. Skipping iteration";
+        yWarningThrottle(5) << LogPrefix << "Failed to get hand joint position. Skipping iteration";
 		return true; // Return true to keep the thread running, we can try to get the data in the next iteration.
     }
 
