@@ -1125,6 +1125,23 @@ bool ManusGloveHelper::getHandJointPosition(std::vector<double>& jointAngleList,
         return false;
     }
 
+    if (p_isRightHand)
+    {
+        if (m_FirstRightGloveID == 0)
+        {
+            yWarningThrottle(5) << ManusGlove_LogPrefix << "No right glove found.";
+            return false;
+        }
+    }
+    else
+    {
+        if (m_FirstLeftGloveID == 0)
+        {
+            yWarningThrottle(5) << ManusGlove_LogPrefix << "No left glove found.";
+            return false;
+        }
+    }
+
     jointAngleList.resize(m_Joints.size());
 
     //Provide 0 values for the first 3 seconds since the data coming from the SDK might not be reliable
