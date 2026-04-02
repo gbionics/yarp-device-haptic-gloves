@@ -1129,7 +1129,7 @@ bool ManusGloveHelper::getHandJointPosition(std::vector<double>& jointAngleList,
     {
         if (m_FirstRightGloveID == 0)
         {
-            yError() << ManusGlove_LogPrefix << "No right glove found.";
+            yWarningThrottle(5) << ManusGlove_LogPrefix << "No right glove found.";
             return false;
         }
     }
@@ -1137,7 +1137,7 @@ bool ManusGloveHelper::getHandJointPosition(std::vector<double>& jointAngleList,
     {
         if (m_FirstLeftGloveID == 0)
         {
-            yError() << ManusGlove_LogPrefix << "No left glove found.";
+            yWarningThrottle(5) << ManusGlove_LogPrefix << "No left glove found.";
             return false;
         }
     }
