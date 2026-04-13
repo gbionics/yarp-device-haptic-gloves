@@ -15,7 +15,7 @@ set PATH=%PATH%;%ManusGlove_DIR%\ManusSDK\lib
 
 
 ## Linux
-Download the `SDK` from https://docs.manus-meta.com/latest/Resources/. The device is tested only with Manus SDK **Version v3.** (with the newer gloves) and Ubuntu 22.04. However, `ManusCore` is not available: instead, we launch `ManusIntegrated`.
+Download the `SDK` from https://docs.manus-meta.com/latest/Resources/. The device is tested only with Manus SDK **Version v3.** (with the `Metagloves Pro`) and Ubuntu 22.04. However, `ManusCore` is not available: instead, we launch `ManusIntegrated`.
 
 For the dependencies, you can refer to https://docs.manus-meta.com/latest/Plugins/SDK/Linux/.
 Summarizing, we only need to install the dependencies for Manus `Integrated`, not `Remote`. Launch:
