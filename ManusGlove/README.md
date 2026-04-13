@@ -7,7 +7,7 @@ Download the `SDK` and `MANUS Core 2 Online` from https://docs.manus-meta.com/la
 Create a folder named `"ManusGlove-API"`, and extract the files inside the folder.
 
 To install the device, it is highly suggested to do it via the [robotology-superbuild](https://github.com/robotology/robotology-superbuild).
-Before doing so, make sure to export the following environemnt variables:
+Before doing so, make sure to export the following environment variables:
 ```bash
 set ManusGlove_DIR=C:\ManusGlove-API\SDKClient\SDKClient_Windows
 set PATH=%PATH%;%ManusGlove_DIR%\ManusSDK\lib
