@@ -8,6 +8,8 @@
 
 #include <ManusGloveHelper.h>
 #include <unordered_map>
+#include <thread>
+#include <cstring>
 
 using namespace manusGlove;
 using namespace std;
@@ -36,7 +38,7 @@ ManusGloveHelper::~ManusGloveHelper()
     s_Instance = nullptr;
 }
 
-bool ManusGloveHelper::Initialize(bool p_hostType)
+bool ManusGloveHelper::Initialize(bool p_hostType, bool p_useManusCore)
 {
     if (s_Instance != this)
     {
@@ -46,7 +48,8 @@ bool ManusGloveHelper::Initialize(bool p_hostType)
     m_ShouldConnectLocally = p_hostType;
     // before we can use the SDK, some internal SDK bits need to be initialized.
     // however after initializing, the SDK is not yet connected to a host or doing anything network related just yet.
-    auto errorCode = CoreSdk_InitializeCore();
+    // Handle the platform specific initialization
+    auto errorCode = p_useManusCore ? CoreSdk_InitializeCore() : CoreSdk_InitializeIntegrated();
     if (errorCode != SDKReturnCode::SDKReturnCode_Success)
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to initilize Core SDK. Error:" << errorCode;
@@ -1104,15 +1107,13 @@ std::string manusGlove::ManusGloveHelper::ConvertFingerJointTypeToString(FingerJ
 
 bool ManusGloveHelper::CopyString(char *const p_Target, const size_t p_MaxLengthThatWillFitInTarget, const std::string &p_Source)
 {
-    const errno_t t_CopyResult = strcpy_s(
-        p_Target,
-        p_MaxLengthThatWillFitInTarget,
-        p_Source.c_str());
-    if (t_CopyResult != 0)
+    if (p_Source.size() >= p_MaxLengthThatWillFitInTarget)
     {
-        yError() << ManusGlove_LogPrefix <<"Copying the string "<<p_Source.c_str()<< "resulted in the error " << t_CopyResult;
+        yError() << ManusGlove_LogPrefix << "Copying the string " << p_Source.c_str() << " failed: source exceeds target buffer size";
         return false;
     }
+    std::strncpy(p_Target, p_Source.c_str(), p_MaxLengthThatWillFitInTarget - 1);
+    p_Target[p_MaxLengthThatWillFitInTarget - 1] = '\0';
     return true;
 }
 
