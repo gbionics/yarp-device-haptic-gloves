@@ -1107,13 +1107,12 @@ std::string manusGlove::ManusGloveHelper::ConvertFingerJointTypeToString(FingerJ
 
 bool ManusGloveHelper::CopyString(char *const p_Target, const size_t p_MaxLengthThatWillFitInTarget, const std::string &p_Source)
 {
-    if (p_Source.size() >= p_MaxLengthThatWillFitInTarget)
+    if (p_Source.size() >= p_MaxLengthThatWillFitInTarget - 1)
     {
-        yError() << ManusGlove_LogPrefix << "Copying the string " << p_Source.c_str() << " failed: source exceeds target buffer size";
-        return false;
+            yError() << ManusGlove_LogPrefix << "Copying the string " << p_Source.c_str() << " failed: source exceeds target buffer size";
+    return false;
     }
-    std::strncpy(p_Target, p_Source.c_str(), p_MaxLengthThatWillFitInTarget - 1);
-    p_Target[p_MaxLengthThatWillFitInTarget - 1] = '\0';
+    std::strncpy(p_Target, p_Source.c_str(), p_MaxLengthThatWillFitInTarget);
     return true;
 }
 
