@@ -145,7 +145,7 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     bool isLocalHost = config.find("is_local_host").asBool();
     hostType = isLocalHost;
 
-    useManusCore = config.check("use_manus_core", yarp::os::Value(false)).asBool();
+    useManusCore = config.check("use_manus_core", yarp::os::Value(true)).asBool();
     yInfo() << LogPrefix << "use_manus_core: " << (useManusCore ? "true" : "false");
 
     // Get Human Joint Names
