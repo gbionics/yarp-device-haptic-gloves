@@ -109,8 +109,9 @@ public:
      * @brief Initialize the SDK, register the callbacks and set the coordinate system.
      * This needs to be done before any of the other SDK functions can be used.
      * @param p_hostType if true it looks for hosts only locally, if false it looks for hosts anywhere in the network-name description
+     * @param p_useManusCore if true uses CoreSdk_InitializeCore(), if false uses CoreSdk_InitializeIntegrated()
      */
-    bool Initialize(bool p_hostType);
+    bool Initialize(bool p_hostType, bool p_useManusCore = false);
 
     /**
      * When you are done with the SDK, don't forget to nicely shut it down

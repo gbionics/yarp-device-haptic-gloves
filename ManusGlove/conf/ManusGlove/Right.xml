@@ -7,6 +7,7 @@
         <param name="wearableName">HapticGlove</param>
         <param name="is_right_hand">true</param>
         <param name="is_local_host">true</param>
+        <param name="use_manus_core">true</param>
         <param name="publish_raw_data">true</param>
         <param name="human_joint_list">( "r_thumb_oppose", "r_thumb_proximal", "r_thumb_middle", "r_thumb_distal",
                                          "r_index_abduction", "r_index_proximal", "r_index_middle", "r_index_distal",

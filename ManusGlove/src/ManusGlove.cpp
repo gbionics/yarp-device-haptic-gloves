@@ -56,6 +56,7 @@ public:
     std::string handSideLogPrefix;
 
     bool hostType;
+    bool useManusCore;
 
     std::vector<double> humanJointState, humanJointStateDeg;
 
@@ -143,6 +144,9 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
 
     bool isLocalHost = config.find("is_local_host").asBool();
     hostType = isLocalHost;
+
+    useManusCore = config.check("use_manus_core", yarp::os::Value(true)).asBool();
+    yInfo() << LogPrefix << "use_manus_core: " << (useManusCore ? "true" : "false");
 
     // Get Human Joint Names
     yarp::os::Bottle* jointListYarp;
@@ -268,7 +272,7 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     yInfo() << LogPrefix << "publish_raw_data: " << (publishRawData ? "true" : "false");
 
 // TODO: Add a check if there is no glove connected!
-    if (!pGlove->Initialize(hostType))
+    if (!pGlove->Initialize(hostType, useManusCore))
     {
         yError() << LogPrefix << "Failed to initialize the ManusGloveHelper on the" << handSideLogPrefix << "hand.";
         return false;
