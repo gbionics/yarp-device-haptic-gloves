@@ -7,7 +7,7 @@ set(MANUS_ROOT_DIR "$ENV{ManusGlove_DIR}" CACHE PATH "Folder containing the Manu
 
 find_path(MANUS_INCLUDE_DIR ManusSDK.h PATHS ${MANUS_ROOT_DIR} PATH_SUFFIXES ManusSDK/include)
 if(UNIX)
-  set(_manus_lib_name ManusSDK_integrated)
+  set(_manus_lib_name ManusSDK_Integrated)
 else()
   set(_manus_lib_name ManusSDK)
 endif()
