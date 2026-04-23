@@ -23,8 +23,8 @@ Summarizing, we only need to install the dependencies for Manus `Integrated`, no
 sudo apt-get update && sudo apt-get install -y build-essential git libtool libzmq3-dev libusb-1.0-0-dev zlib1g-dev libudev-dev gdb libncurses5-dev && sudo apt-get clean
 ```
 
-To allow connections to MANUS hardware you need to place the following file in `/etc/udev/rules.d/70-manus-hid-rules`.
-So, run `sudo nano /etc/udev/rules.d/70-manus-hid-rules` and put:
+To allow connections to MANUS hardware you need to place the following file in `/etc/udev/rules.d/70-manus-hid-rules.rules`.
+So, run `sudo nano /etc/udev/rules.d/70-manus-hid-rules.rules` and put:
 
 ```
 # HIDAPI/libusb
@@ -54,6 +54,8 @@ Export the environmental variables:
 
 ```bash
 export ManusGlove_DIR=<PATH_TO>/ManusSDK_v3.1.1/SDKClient_Linux
+```
+```bash
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ManusGlove_DIR$/ManusSDK/lib
 ```
 
@@ -72,7 +74,7 @@ make install
 ```
 
 ### Run the device
-After installation, the `xml` should now be installed in the correct `YARP_DATA_DIRS`.
+After installation, the device and the `yarprobotinterface` config `.xml` should now be installed in the correct `YARP_DATA_DIRS`.
 You can launch:
 ```bash
 yarprobotinterface --config ManusGlove.xml
