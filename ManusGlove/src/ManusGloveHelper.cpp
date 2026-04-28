@@ -638,33 +638,39 @@ bool ManusGloveHelper::ConnectingToCore()
 
 bool ManusGloveHelper::UpdateBeforeDisplayingData() //TODO: FailedUpdate??
 {
-    m_LandscapeMutex.lock();
-    if (m_NewLandscape != nullptr)
     {
-        if (m_Landscape != nullptr)
+        std::lock_guard<std::mutex> lock(s_Instance->m_LandscapeMutex);
+        if (s_Instance->m_NewLandscape != nullptr)
         {
-            delete m_Landscape;
-        }
-        m_Landscape = m_NewLandscape;
-        m_NewLandscape = nullptr;
-        m_GestureLandscapeData.swap(m_NewGestureLandscapeData);
+            if (s_Instance->m_Landscape != nullptr)
+            {
+                delete s_Instance->m_Landscape;
+            }
+            s_Instance->m_Landscape = s_Instance->m_NewLandscape;
+            s_Instance->m_NewLandscape = nullptr;
+            s_Instance->m_GestureLandscapeData.swap(s_Instance->m_NewGestureLandscapeData);
+		}
+
     }
-    m_LandscapeMutex.unlock();
 
     m_FirstLeftGloveID = 0;
     m_FirstRightGloveID = 0;
-    if (m_Landscape == nullptr)
-        return true;
-    for (size_t i = 0; i < m_Landscape->gloveDevices.gloveCount; i++)
+
+    if (s_Instance->m_Landscape == nullptr)
     {
-        if (m_FirstLeftGloveID == 0 && m_Landscape->gloveDevices.gloves[i].side == Side::Side_Left)
+        return false;
+    }
+
+    for (size_t i = 0; i < s_Instance->m_Landscape->gloveDevices.gloveCount; i++)
+    {
+        if (m_FirstLeftGloveID == 0 && s_Instance->m_Landscape->gloveDevices.gloves[i].side == Side::Side_Left)
         {
-            m_FirstLeftGloveID = m_Landscape->gloveDevices.gloves[i].id;
+            m_FirstLeftGloveID = s_Instance->m_Landscape->gloveDevices.gloves[i].id;
             continue;
         }
-        if (m_FirstRightGloveID == 0 && m_Landscape->gloveDevices.gloves[i].side == Side::Side_Right)
+        if (m_FirstRightGloveID == 0 && s_Instance->m_Landscape->gloveDevices.gloves[i].side == Side::Side_Right)
         {
-            m_FirstRightGloveID = m_Landscape->gloveDevices.gloves[i].id;
+            m_FirstRightGloveID = s_Instance->m_Landscape->gloveDevices.gloves[i].id;
             continue;
         }
     }
@@ -840,13 +846,14 @@ void ManusGloveHelper::OnLandscapeCallback(const Landscape* const p_Landscape)
         return;
 
     Landscape *t_Landscape = new Landscape(*p_Landscape);
-    s_Instance->m_LandscapeMutex.lock();
-    if (s_Instance->m_NewLandscape != nullptr)
-        delete s_Instance->m_NewLandscape;
-    s_Instance->m_NewLandscape = t_Landscape;
-    s_Instance->m_NewGestureLandscapeData.resize(t_Landscape->gestureCount);
-    CoreSdk_GetGestureLandscapeData(s_Instance->m_NewGestureLandscapeData.data(), (uint32_t)s_Instance->m_NewGestureLandscapeData.size());
-    s_Instance->m_LandscapeMutex.unlock();
+    std::lock_guard<std::mutex> lock(s_Instance->m_LandscapeMutex);
+    {
+        if (s_Instance->m_NewLandscape != nullptr)
+            delete s_Instance->m_NewLandscape;
+        s_Instance->m_NewLandscape = t_Landscape;
+        s_Instance->m_NewGestureLandscapeData.resize(t_Landscape->gestureCount);
+        CoreSdk_GetGestureLandscapeData(s_Instance->m_NewGestureLandscapeData.data(), (uint32_t)s_Instance->m_NewGestureLandscapeData.size());
+    }
 }
 
 void ManusGloveHelper::OnSystemCallback(const SystemMessage* const p_SystemMessage)
@@ -1121,7 +1128,7 @@ bool ManusGloveHelper::getHandJointPosition(std::vector<double>& jointAngleList,
 
     if (!UpdateBeforeDisplayingData())
     {
-        yError() << ManusGlove_LogPrefix << "Failed to update the joint position.";
+        yWarningThrottle(5) << ManusGlove_LogPrefix << "Failed to update the joint position.";
         return false;
     }
 
