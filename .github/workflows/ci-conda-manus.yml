@@ -97,6 +97,15 @@ jobs:
                 -DMANUS_SDK_DOWNLOAD_VERSION=${{ matrix.manus_sdk_version }}
           fi
 
+      - name: Dump CMake logs (on failure)
+        if: failure()
+        run: |
+          find build -type f \( -name CMakeConfigureLog.yaml -o -name CMakeError.log -o -name CMakeOutput.log \) | while read -r f; do
+            echo "::group::$f"
+            cat "$f"
+            echo "::endgroup::"
+          done
+
       - name: Test device loading (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
