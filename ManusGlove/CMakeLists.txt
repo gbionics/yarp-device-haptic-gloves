@@ -12,6 +12,15 @@ else()
     find_package(ManusSDK REQUIRED)
 endif()
 
+# There is a breaking change from Manus v3.2.1 to v3.2.1 concerning
+# an enum type value renaming. So we check the specific header to detect this.
+include(CheckCXXSourceCompiles)
+set(CMAKE_REQUIRED_LIBRARIES ManusSDK::ManusSDK)
+check_cxx_source_compiles("
+#include <ManusSDKTypes.h>
+int main() { return ErgonomicsDataType_LeftFingerThumbCMCSpread; }" MANUS_SDK_HAS_THUMB_CMC_ERGONOMICS)
+unset(CMAKE_REQUIRED_LIBRARIES)
+
 # Export all symbols in Windows
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
@@ -41,6 +50,10 @@ yarp_add_plugin(${ManusGloveDevName}
 
 target_include_directories(${ManusGloveDevName} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
+if(NOT MANUS_SDK_HAS_THUMB_CMC_ERGONOMICS)
+    target_compile_definitions(${ManusGloveDevName} PRIVATE MANUS_VERSION_IS_LESS_THAN_3_2_1)
+endif()
 
 target_link_libraries(${ManusGloveDevName}
     PUBLIC
