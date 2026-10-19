@@ -4,20 +4,32 @@
 include(FetchContent)
 
 # Configuration for Manus SDK download
-set(MANUS_SDK_DOWNLOAD_VERSION "3.1.1" CACHE STRING "Manus SDK version to download")
-set(_manus_sdk_archive_name "MANUS_Core_${MANUS_SDK_DOWNLOAD_VERSION}_SDK.zip")
+set(MANUS_SDK_DOWNLOAD_VERSION "3.2.1" CACHE STRING "Manus SDK version to download")
+
+if(MANUS_SDK_DOWNLOAD_VERSION VERSION_LESS "3.2.1")
+  set(_manus_sdk_archive_name "MANUS_Core_${MANUS_SDK_DOWNLOAD_VERSION}_SDK.zip")
+  set(_manus_sdk_hash_key "${MANUS_SDK_DOWNLOAD_VERSION}")
+elseif(WIN32)
+  set(_manus_sdk_archive_name "MANUS_Core_${MANUS_SDK_DOWNLOAD_VERSION}_SDK_Windows.zip")
+  set(_manus_sdk_hash_key "${MANUS_SDK_DOWNLOAD_VERSION}-Windows")
+else()
+  set(_manus_sdk_archive_name "MANUS_Core_${MANUS_SDK_DOWNLOAD_VERSION}_SDK_Linux.tar.gz")
+  set(_manus_sdk_hash_key "${MANUS_SDK_DOWNLOAD_VERSION}-Linux")
+endif()
 
 # Version-specific SHA256 hashes for integrity verification
 # Note: Update these hashes when adding support for new SDK versions
 set(_manus_sdk_version_hashes
     "2.5.1=SHA256=7384c08e493ea2077fe7038701f47881f05c4b37e7f9c621fc0fcf285718da72"
     "3.1.1=SHA256=c5ccd3c42a501107ec79f70d8450a486fbc3925c5c1e18e606114d09f2d9d24a"
+    "3.2.1-Linux=SHA256=c2bafd19824ecb458d34e2f559fbd51dd1c7118288c75c24ec5163d6b4135f46"
+    "3.2.1-Windows=SHA256=c8f6ffc2c2c477150c1921229dce6a495b3972d612d23efba4b69813aa33d7f0"
 )
 
 set(_manus_sdk_url_hash "")
 foreach(_hash_entry ${_manus_sdk_version_hashes})
     string(REGEX MATCH "^([^=]+)=(.+)$" _hash_matched "${_hash_entry}")
-    if(CMAKE_MATCH_1 STREQUAL MANUS_SDK_DOWNLOAD_VERSION)
+    if(CMAKE_MATCH_1 STREQUAL _manus_sdk_hash_key)
         set(_manus_sdk_url_hash "${CMAKE_MATCH_2}")
         break()
     endif()
@@ -29,14 +41,16 @@ if(NOT _manus_sdk_url_hash)
     "Supported versions are:\n"
     "  - 2.5.1\n"
     "  - 3.1.1\n"
+    "  - 3.2.1\n"
     "Please set MANUS_SDK_DOWNLOAD_VERSION to one of the supported versions.")
 endif()
 
 if(MANUS_SDK_DOWNLOAD_VERSION VERSION_LESS "3.0.0")
-  set(_manus_sdk_url "https://static.manus-meta.com/resources/manus_core_2/sdk/${_manus_sdk_archive_name}")
+  set(_manus_sdk_major 2)
 else()
-  set(_manus_sdk_url "https://static.manus-meta.com/resources/manus_core_3/sdk/${_manus_sdk_archive_name}")
+  set(_manus_sdk_major 3)
 endif()
+set(_manus_sdk_url "https://static.manus-meta.com/resources/manus_core_${_manus_sdk_major}/sdk/${_manus_sdk_archive_name}")
 
 # Fetch ManusSDK from the official Manus static server
 FetchContent_Declare(
@@ -75,7 +89,9 @@ if(EXISTS "${_manus_sdk_nested_zip}")
 endif()
 
 # The archive structure does not have a versioned subdirectory, SDKClient_* are at the root
-if(UNIX)
+if(MANUS_SDK_DOWNLOAD_VERSION VERSION_GREATER_EQUAL "3.2.1")
+  set(_manus_sdk_client_dir "${_MANUS_SDK_EXTRACT_ROOT}/C++/SDKClient")
+elseif(UNIX)
   set(_manus_sdk_client_dir "${_MANUS_SDK_EXTRACT_ROOT}/SDKClient_Linux")
 else()
   set(_manus_sdk_client_dir "${_MANUS_SDK_EXTRACT_ROOT}/SDKClient_Windows")
@@ -149,7 +165,16 @@ elseif(UNIX)
     # packages, causing a runtime "cannot open shared object file" failure.
     # libManusSDK_Integrated.so statically bundles those dependencies and only
     # needs standard system libraries.
-    set(_MANUS_SDK_LIB "${_manus_sdk_client_dir}/ManusSDK/lib/libManusSDK_Integrated.so")
+    if(MANUS_SDK_DOWNLOAD_VERSION VERSION_GREATER_EQUAL "3.2.1")
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+            set(_MANUS_SDK_LINUX_ARCH aarch64)
+        else()
+            set(_MANUS_SDK_LINUX_ARCH amd64)
+        endif()
+        set(_MANUS_SDK_LIB "${_manus_sdk_client_dir}/ManusSDK/lib/${_MANUS_SDK_LINUX_ARCH}/libManusSDK-${_MANUS_SDK_LINUX_ARCH}.so")
+    else()
+        set(_MANUS_SDK_LIB "${_manus_sdk_client_dir}/ManusSDK/lib/libManusSDK_Integrated.so")
+    endif()
     set(_MANUS_SDK_INCLUDE "${_manus_sdk_client_dir}/ManusSDK/include")
     
     if(NOT EXISTS "${_MANUS_SDK_LIB}")
