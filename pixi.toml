@@ -1,0 +1,17 @@
+[workspace]
+name = "yarp-device-haptic-gloves"
+version = "1.0.0"
+description = "Conda environment for building YARP haptic glove devices"
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64"]
+
+[dependencies]
+python = "3.11.*"
+cmake = "*"
+ninja = "*"
+pkg-config = "*"
+compilers = "*"
+eigen = "*"
+colcon-common-extensions = "*"
+yarp = "*"
+human-dynamics-estimation = "*"
