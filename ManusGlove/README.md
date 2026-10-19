@@ -116,5 +116,37 @@ You can launch:
 yarprobotinterface --config ManusGlove.xml
 ```
 
+## Generate the hand URDF
+
+[`code/generate_hand_urdf.py`](code/generate_hand_urdf.py) builds a URDF of the user's hand from the MANUS raw-skeleton data, so that all joint angles equal to zero reproduce the captured pose. It works in two steps: a live capture from MANUS Core, which also saves the raw data to a JSON file, and an optional offline regeneration of the URDF from that JSON file.
+
+### 1. Live capture (creates the JSON)
+
+Live capture (`--live`) requires a running MANUS Core with the gloves connected and the MANUS Python SDK, i.e. the `Python` folder shipped with the MANUS Core SDK (tested with version `3.2.1`). From the repository root, using the Pixi environment (which provides `cffi`):
+
+```bash
+pixi run python ManusGlove/code/generate_hand_urdf.py --side right --live --manus-sdk-dir <PATH_TO>/MANUS_Core_<version>_SDK_Windows/Python --out-dir <OUTPUT_DIR>
+```
+
+Instead of `--manus-sdk-dir` you can set the `MANUS_SDK_PYTHON_DIR` environment variable. Use `--side left`, `--side right` or `--side both` (default), and `--remote` to search for MANUS Core on the network instead of localhost. Keep the hand still while the script waits for the data.
+
+For each captured hand, the script writes two files in `--out-dir` (default: current directory):
+- `<side>_hand.urdf`: the URDF of the hand;
+- `<side>_raw_skeleton.json`: the raw-skeleton frame received from MANUS Core (one entry per node, with its parent, chain type, joint type, position and rotation).
+
+#### Capturing from a MANUS Core recording (`.mrec`)
+
+The capture can also be taken from a recording saved in MANUS Core (`.mrec`) instead of from the gloves worn live. Open the recording in MANUS Core and play it back, either in loop or paused on the frame you want to use for the URDF, then run the same `--live` command shown above. The script takes the first frame it receives, so pausing on the desired frame is the way to choose the captured pose.
+
+In this case the gloves are not needed, but `--live` is still required (the data come from MANUS Core) and the MANUS dongle must be connected to the PC.
+
+### 2. Regenerate the URDF from a saved capture (optional)
+
+The JSON written in step 1 can be used to rebuild the URDF later, e.g. after changing the script, without MANUS Core, the gloves or the MANUS SDK. Only one hand at a time is supported:
+
+```bash
+pixi run python ManusGlove/code/generate_hand_urdf.py --side right --from-json <OUTPUT_DIR>/right_raw_skeleton.json --out-dir <OUTPUT_DIR>
+```
+
 
 
