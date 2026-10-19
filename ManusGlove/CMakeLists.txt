@@ -15,11 +15,14 @@ endif()
 # There is a breaking change from Manus v3.2.1 to v3.2.1 concerning
 # an enum type value renaming. So we check the specific header to detect this.
 include(CheckCXXSourceCompiles)
-set(CMAKE_REQUIRED_LIBRARIES ManusSDK::ManusSDK)
+get_target_property(MANUS_SDK_INCLUDE_DIRS ManusSDK::ManusSDK INTERFACE_INCLUDE_DIRECTORIES)
+set(CMAKE_REQUIRED_INCLUDES ${MANUS_SDK_INCLUDE_DIRS})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 check_cxx_source_compiles("
 #include <ManusSDKTypes.h>
-int main() { return ErgonomicsDataType_LeftFingerThumbCMCSpread; }" MANUS_SDK_HAS_THUMB_CMC_ERGONOMICS)
-unset(CMAKE_REQUIRED_LIBRARIES)
+int f() { return ErgonomicsDataType_LeftFingerThumbCMCSpread; }" MANUS_SDK_HAS_THUMB_CMC_ERGONOMICS)
+unset(CMAKE_REQUIRED_INCLUDES)
+unset(CMAKE_TRY_COMPILE_TARGET_TYPE)
 
 # Export all symbols in Windows
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
