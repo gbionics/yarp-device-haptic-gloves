@@ -148,5 +148,39 @@ The JSON written in step 1 can be used to rebuild the URDF later, e.g. after cha
 pixi run python ManusGlove/code/generate_hand_urdf.py --side right --from-json <OUTPUT_DIR>/right_raw_skeleton.json --out-dir <OUTPUT_DIR>
 ```
 
+## Generate the hand URDF in the FBX skeleton reference pose
+
+[`code/generate_hand_urdf_from_fbx.py`](code/generate_hand_urdf_from_fbx.py) builds one URDF per hand from an FBX exported by MANUS Core. Instead of the pose captured live, the URDF uses the **reference pose (bind pose) of the skeleton stored in the FBX**, so joint angles equal to zero reproduce that pose regardless of the pose held during the recording. The FBX data are used as they are.
+
+In the FBX export MANUS Core applies the recorded data to a target skeleton chosen in the [export settings](https://docs.manus-meta.com/3.2.0/Software/Rec/Exporting%20fbx/). Export with:
+- **Skeleton: MANUS Polygon Avatar** (the only skeleton supported by the script);
+- **Scale skeleton** enabled, otherwise the phalanx lengths are those of the avatar instead of the user's.
+
+With these settings:
+- phalanx lengths are the user's (MANUS calibration);
+- metacarpals, palm and pose (finger bends, spread, thumb orientation) are those of the avatar skeleton, scaled to the user.
+
+The live URDF (`generate_hand_urdf.py`) instead uses the MANUS raw skeleton for the whole hand (the same data exported in the Core CSV).
+
+Link and joint names, axes, sign conventions and limits are the same as in `generate_hand_urdf.py`. No MANUS Core, gloves or SDK are needed:
+
+```bash
+pixi run python ManusGlove/code/generate_hand_urdf_from_fbx.py <FILE>.fbx --out-dir <OUTPUT_DIR>
+```
+
+It writes `left_hand_rest_pose.urdf` and `right_hand_rest_pose.urdf` in `--out-dir` (default: current directory); use `--side left` or `--side right` for a single hand. The script warns if the bone values differ from the FBX bind pose or use FBX features it ignores (pivots, offsets, scaling).
+
+## Inspect a MANUS FBX export
+
+[`code/read_fbx.py`](code/read_fbx.py) reads a binary FBX file (e.g. exported from a MANUS Core recording) and prints what it contains: file info (axis system, units, frame rate, objects, mesh), bone hierarchy with the static local transforms, bind/rest poses and animated channels. It only needs the Python standard library:
+
+```bash
+pixi run python ManusGlove/code/read_fbx.py <FILE>.fbx
+```
+
+Use `--info`, `--hierarchy`, `--poses` or `--animation` to print only some sections, and `--bones <REGEX>` to select bones (e.g. `--bones "_r$"` for the right hand). `--csv <FILE>.csv` exports the animated local transforms of the selected bones, one row per frame.
+
+Note that a MANUS FBX contains the **retargeted** skeleton (the target skeleton chosen in the export), not the MANUS raw skeleton: its rotations are not the ergonomics angles. If "Use first frame bindpose" was enabled in the export, frame 0 is the skeleton bind pose, not recorded data.
+
 
 
