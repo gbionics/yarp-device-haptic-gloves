@@ -66,7 +66,7 @@ cmake .. \
 	-DENABLE_MANUS_SDK_DOWNLOAD=ON
 ```
 
-The default downloaded version is `3.1.1`.
+The default downloaded version is `3.2.1`.
 If you want a different version, add:
 
 ```bash
@@ -76,6 +76,7 @@ If you want a different version, add:
 Examples:
 
 ```bash
+-DMANUS_SDK_DOWNLOAD_VERSION=3.2.1
 -DMANUS_SDK_DOWNLOAD_VERSION=3.1.1
 -DMANUS_SDK_DOWNLOAD_VERSION=2.5.1
 ```

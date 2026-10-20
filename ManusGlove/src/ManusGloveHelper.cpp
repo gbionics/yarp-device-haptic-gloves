@@ -278,10 +278,17 @@ bool manusGlove::ManusGloveHelper::SetHandJoints(const std::vector<std::string>&
     std::vector<std::string> failures;
 
     std::unordered_map<std::string, ErgonomicsDataType> leftFingersMap = {
+#ifdef MANUS_VERSION_IS_LESS_THAN_3_2_1
         {"l_thumb_oppose",    ErgonomicsDataType_LeftFingerThumbMCPSpread},
         {"l_thumb_proximal",  ErgonomicsDataType_LeftFingerThumbMCPStretch},
         {"l_thumb_middle",    ErgonomicsDataType_LeftFingerThumbPIPStretch},
         {"l_thumb_distal",    ErgonomicsDataType_LeftFingerThumbDIPStretch},
+#else
+        {"l_thumb_oppose",    ErgonomicsDataType_LeftFingerThumbCMCSpread},
+        {"l_thumb_proximal",  ErgonomicsDataType_LeftFingerThumbCMCStretch},
+        {"l_thumb_middle",    ErgonomicsDataType_LeftFingerThumbMCPStretch},
+        {"l_thumb_distal",    ErgonomicsDataType_LeftFingerThumbIPStretch},
+#endif
         {"l_index_abduction", ErgonomicsDataType_LeftFingerIndexMCPSpread},
         {"l_index_proximal",  ErgonomicsDataType_LeftFingerIndexMCPStretch},
         {"l_index_middle",    ErgonomicsDataType_LeftFingerIndexPIPStretch},
@@ -300,10 +307,17 @@ bool manusGlove::ManusGloveHelper::SetHandJoints(const std::vector<std::string>&
         {"l_pinky_distal",    ErgonomicsDataType_LeftFingerPinkyDIPStretch}};
 
     std::unordered_map<std::string, ErgonomicsDataType> rightFingersMap = {
+#ifdef MANUS_VERSION_IS_LESS_THAN_3_2_1
         {"r_thumb_oppose",    ErgonomicsDataType_RightFingerThumbMCPSpread},
         {"r_thumb_proximal",  ErgonomicsDataType_RightFingerThumbMCPStretch},
         {"r_thumb_middle",    ErgonomicsDataType_RightFingerThumbPIPStretch},
         {"r_thumb_distal",    ErgonomicsDataType_RightFingerThumbDIPStretch},
+#else
+        {"r_thumb_oppose",    ErgonomicsDataType_RightFingerThumbCMCSpread},
+        {"r_thumb_proximal",  ErgonomicsDataType_RightFingerThumbCMCStretch},
+        {"r_thumb_middle",    ErgonomicsDataType_RightFingerThumbMCPStretch},
+        {"r_thumb_distal",    ErgonomicsDataType_RightFingerThumbIPStretch},
+#endif
         {"r_index_abduction", ErgonomicsDataType_RightFingerIndexMCPSpread},
         {"r_index_proximal",  ErgonomicsDataType_RightFingerIndexMCPStretch},
         {"r_index_middle",    ErgonomicsDataType_RightFingerIndexPIPStretch},
