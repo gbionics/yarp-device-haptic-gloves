@@ -9,22 +9,27 @@ MANUS raw-skeleton conventions (verified on captured data):
   * node position AND rotation are both expressed in one common frame
     (not parent-relative); this script converts them to parent-local.
   * every bone points along +X of its own node frame.
+  * PIP, DIP, thumb MCP and thumb IP are exact hinges about +Y of the node frame
+    (a positive rotation has the sign of the MANUS flex angle, on both hands).
   * node -> anatomical joint:
         fingers: Metacarpal = CMC (fixed), Proximal = MCP (spread+stretch),
                  Intermediate = PIP, Distal = DIP, Tip = fingertip (fixed)
-        thumb:   Metacarpal = CMC (stretch+spread), Proximal = MCP,
+        thumb:   Metacarpal = CMC (spread+stretch), Proximal = MCP,
                  Distal = IP, Tip = fingertip (fixed)
     which matches the 20 ergonomics values Core streams per hand.
 
-Joint axes follow the MANUS ergonomics conventions
-(https://docs.manus-meta.com/3.2.0/Software/Rec/Ergonomics/), so a positive
-joint angle moves the finger the same way as a positive ergonomics value:
-  * *_stretch (MANUS "Flex"): flexion, toward the palm.
-  * *_mcp_spread: abduction, toward the thumb.
-  * thumb_cmc_spread: palmar abduction (thumb leaves the palm plane, palm side).
-  * thumb_cmc_stretch: radial abduction (thumb moves away from the index, in the palm plane).
-Only the zero differs: here it is the captured pose, in MANUS it is every bone
-aligned with the forward vector of the hand.
+Joint axes are expressed in the node frames (the joint frame at zero angle):
+  * *_stretch: flexion about +Y of the node (MANUS "Flex"); PIP, DIP, thumb MCP and
+    thumb IP are exact hinges about this axis in the MANUS raw skeleton.
+  * *_mcp_spread: about the hand normal, applied before stretch, positive toward the
+    thumb (-Z of the hand frame on the left hand, +Z on the right hand).
+  * thumb_cmc_spread (palmar abduction): about the node Z axis, with the same sign rule;
+    thumb_cmc_stretch (radial abduction): about -Y of the node, as MANUS uses the
+    opposite alignment for the thumb CMC.
+These axes follow the MANUS raw-skeleton motion and the sign of the MANUS
+ergonomics angles (checked on recorded data). MANUS MCP and thumb CMC also include
+a small twist that a 2-DOF joint cannot reproduce. The zero is the captured pose
+(in MANUS ergonomics it is every bone aligned with the forward vector of the hand).
 
 Modes (one is required, no generic/average hand is ever used):
   * --live: capture one frame from MANUS Core.
@@ -58,7 +63,7 @@ CHAIN_TO_FINGER = {
 
 # (is_thumb, MANUS FingerJointType) -> (anatomical joint name, dofs at that node, in chain order)
 JOINT_DOFS = {
-    (True, "Metacarpal"): ("cmc", ("stretch", "spread")),
+    (True, "Metacarpal"): ("cmc", ("spread", "stretch")),
     (True, "Proximal"): ("mcp", ("stretch",)),
     (True, "Distal"): ("ip", ("stretch",)),
     (False, "Proximal"): ("mcp", ("spread", "stretch")),
@@ -162,42 +167,28 @@ def build_hand_urdf(side, nodes, verbose=True):
     root_node = next(n for n in nodes if n["chain_type"] == "Hand")
 
     # Re-express everything in the Hand node's frame, so the URDF root is the wrist.
-    qh_inv = qinv(tuple(root_node["rotation_wxyz"]))
+    # SDK quaternions are float32 and slightly off unit norm: normalize them first.
+    quat = {nid: normalize(tuple(n["rotation_wxyz"])) for nid, n in by_id.items()}
+    qh_inv = qinv(quat[root_node["node_id"]])
     ph = tuple(root_node["position_xyz"])
     pos = {nid: qrot(qh_inv, sub(n["position_xyz"], ph)) for nid, n in by_id.items()}
-    rot = {nid: qmul(qh_inv, tuple(n["rotation_wxyz"])) for nid, n in by_id.items()}
+    rot = {nid: qmul(qh_inv, quat[nid]) for nid in by_id}
 
     children = {}
     for n in nodes:
         if n["node_id"] != n["parent_id"]:
             children.setdefault(n["parent_id"], []).append(n["node_id"])
 
-    def find(finger, joint):
-        return next(n["node_id"] for n in nodes
-                    if CHAIN_TO_FINGER.get(n["chain_type"]) == finger and n["finger_joint_type"] == joint)
+    # Joint axes in the node frame (= joint frame at zero angle), fitted on MANUS raw-skeleton motion:
+    # flexion is about +Y of the node (exact hinge for PIP/DIP/thumb MCP/IP), MCP spread is about the
+    # hand normal and thumb CMC uses the node axes with the opposite stretch sign (as in MANUS).
+    # Spread signs move the finger toward the thumb: -Z on the left hand, +Z on the right hand.
+    spread_sign = -1.0 if side == "l" else 1.0
 
-    # Palm normal (pointing out of the palm), used to derive flexion/abduction axes.
-    # Built only from knuckle/metacarpal points, so it does not move with the fingers.
-    lateral = sub(pos[find("index", "Proximal")], pos[find("pinky", "Proximal")])
-    forward = sub(pos[find("middle", "Proximal")], pos[find("middle", "Metacarpal")])
-    palm_normal = normalize(cross(lateral, forward) if side == "r" else cross(forward, lateral))
-    # Positive rotation about this axis moves a finger toward the thumb (MANUS spread sign) on both hands.
-    radial_normal = palm_normal if side == "l" else tuple(-c for c in palm_normal)
-
-    # Per-finger reference direction along the metacarpal (rigid with the palm for the 4 fingers).
-    finger_ref = {f: normalize(sub(pos[find(f, "Proximal")], pos[find(f, "Metacarpal")]))
-                  for f in CHAIN_TO_FINGER.values()}
-
-    def flexion_axis(bone_dir, ref):
-        # Only the in-palm-plane part of the bone defines the flexion plane, so the axis
-        # is the same whether the bone points forward, down, up or curls back.
-        dot_n = sum(b * c for b, c in zip(bone_dir, palm_normal))
-        in_plane = tuple(b - dot_n * c for b, c in zip(bone_dir, palm_normal))
-        if math.sqrt(sum(c * c for c in in_plane)) < 0.2:
-            in_plane = ref
-        if sum(a * b for a, b in zip(in_plane, ref)) < 0:
-            in_plane = tuple(-c for c in in_plane)
-        return normalize(cross(in_plane, palm_normal))
+    def joint_axes(nid, finger, joint_name):
+        if finger == "thumb" and joint_name == "cmc":
+            return {"spread": (0.0, 0.0, spread_sign), "stretch": (0.0, -1.0, 0.0)}
+        return {"spread": qrot(qinv(rot[nid]), (0.0, 0.0, spread_sign)), "stretch": (0.0, 1.0, 0.0)}
 
     def link_name(n):
         if n["chain_type"] == "Hand":
@@ -230,16 +221,8 @@ def build_hand_urdf(side, nodes, verbose=True):
             add_joint(robot, f"{name}_fixed", "fixed", parent_name, name, xyz, rpy)
             continue
 
-        # Axes are expressed in this node's own frame (= the joint frame at zero angle).
         joint_name, dofs = dofs_spec
-        bone_dir = qrot(rot[nid], (1.0, 0.0, 0.0))
-        flex_axis = qrot(qinv(rot[nid]), flexion_axis(bone_dir, finger_ref[finger]))
-        in_palm_axis = qrot(qinv(rot[nid]), radial_normal)
-        if finger == "thumb" and joint_name == "cmc":
-            # MANUS thumb CMC: "spread" leaves the palm plane, "stretch" stays in it.
-            axes = {"spread": flex_axis, "stretch": in_palm_axis}
-        else:
-            axes = {"stretch": flex_axis, "spread": in_palm_axis}
+        axes = joint_axes(nid, finger, joint_name)
 
         current_parent = parent_name
         for i, dof in enumerate(dofs):

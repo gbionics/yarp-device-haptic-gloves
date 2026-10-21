@@ -120,6 +120,8 @@ yarprobotinterface --config ManusGlove.xml
 
 [`code/generate_hand_urdf.py`](code/generate_hand_urdf.py) builds a URDF of the user's hand from the MANUS raw-skeleton data, so that all joint angles equal to zero reproduce the captured pose. It works in two steps: a live capture from MANUS Core, which also saves the raw data to a JSON file, and an optional offline regeneration of the URDF from that JSON file.
 
+The URDF has the 20 joints of the MANUS ergonomics data (CMC spread/stretch, MCP and IP stretch for the thumb; MCP spread/stretch, PIP and DIP stretch for the other fingers). Their axes come from the MANUS raw-skeleton node frames: flexion is about the node +Y axis (PIP, DIP, thumb MCP and IP are exact hinges about it), MCP spread is about the hand normal and the thumb CMC uses the node axes, so a positive joint angle has the same sign as the corresponding MANUS ergonomics angle.
+
 ### 1. Live capture (creates the JSON)
 
 Live capture (`--live`) requires a running MANUS Core with the gloves connected and the MANUS Python SDK, i.e. the `Python` folder shipped with the MANUS Core SDK (tested with version `3.2.1`). From the repository root, using the Pixi environment (which provides `cffi`):
@@ -148,6 +150,38 @@ The JSON written in step 1 can be used to rebuild the URDF later, e.g. after cha
 pixi run python ManusGlove/code/generate_hand_urdf.py --side right --from-json <OUTPUT_DIR>/right_raw_skeleton.json --out-dir <OUTPUT_DIR>
 ```
 
+### Live capture only at the MANUS ergonomics zero
+
+[`code/generate_hand_urdf_neutral.py`](code/generate_hand_urdf_neutral.py) works like `--live`, but it does not take the first frame: it waits until the MANUS ergonomics angles of the hand are all within `--tolerance` degrees of 0 (default 2.0) for `--hold` seconds (default 0.5), and only then captures the raw-skeleton frame used as the URDF zero pose. While waiting, it prints the angle farthest from zero. The URDF is built with the same code as `generate_hand_urdf.py`.
+
+```bash
+pixi run python ManusGlove/code/generate_hand_urdf_neutral.py --side right --tolerance 1.5 --manus-sdk-dir <PATH_TO>/MANUS_Core_<version>_SDK_Windows/Python --out-dir <OUTPUT_DIR>
+```
+
+- By default only the flexion angles (`*_stretch`) are checked; `--include-spread` also checks the spread angles, `--exclude <name> ...` skips single angles (e.g. `--exclude thumb_cmc_stretch`).
+- The raw skeleton and the ergonomics arrive on two separate streams: a raw-skeleton frame is accepted only if the latest ergonomics sample of the same glove is younger than `--max-ergo-age` seconds (default 0.1).
+- `--timeout` (default 60 s) is the time allowed to reach the pose.
+
+It writes `<side>_hand_neutral.urdf`, `<side>_raw_skeleton_neutral.json` (same format as step 1, usable with `--from-json`) and `<side>_ergonomics_neutral.json` (the ergonomics angles of the captured frame and the settings used).
+
+This makes the reference pose repeatable between captures; it does not by itself guarantee that the URDF joint axes match the internal MANUS hand model.
+
+## Generate the hand URDF from a MANUS Core CSV export
+
+[`code/generate_hand_urdf_from_csv.py`](code/generate_hand_urdf_from_csv.py) builds the URDF from one frame of a CSV exported by MANUS Core (one file per hand), the same way it is built from the SDK. The CSV contains the same raw skeleton streamed by the SDK: the script rebuilds the raw-skeleton nodes in the SDK convention and uses the same URDF builder as `generate_hand_urdf.py`, so the URDF is the same as the live one; joint angles equal to zero reproduce the pose of the chosen frame. The ergonomics angles are not used. No MANUS Core, gloves or SDK are needed:
+
+```bash
+pixi run python ManusGlove/code/generate_hand_urdf_from_csv.py <FILE>_R.csv --frame <N> --out-dir <OUTPUT_DIR>
+```
+
+Export the hand joint positions and rotations for all fingers. The CSV does not store the node hierarchy (the MANUS raw-skeleton one is used) nor some export settings:
+- the hand is taken from the `_L`/`_R` file suffix, or set with `--side`;
+- the length unit is set with `--unit` (default `cm`);
+- the coordinate-system handedness is set with `--handedness` or detected from the raw-skeleton palm (MANUS places the thumb CMC on the palm side of the other CMCs); left-handed exports are converted to right-handed;
+- the rotation convention is detected from the data; if detection fails, export the rotations as quaternions.
+
+Besides `<side>_hand.urdf`, the script writes `<side>_raw_skeleton.json` in the same format saved by `generate_hand_urdf.py --live`, so `generate_hand_urdf.py --from-json` gives the same URDF.
+
 ## Generate the hand URDF in the FBX skeleton reference pose
 
 [`code/generate_hand_urdf_from_fbx.py`](code/generate_hand_urdf_from_fbx.py) builds one URDF per hand from an FBX exported by MANUS Core. Instead of the pose captured live, the URDF uses the **reference pose (bind pose) of the skeleton stored in the FBX**, so joint angles equal to zero reproduce that pose regardless of the pose held during the recording. The FBX data are used as they are.
@@ -169,6 +203,16 @@ pixi run python ManusGlove/code/generate_hand_urdf_from_fbx.py <FILE>.fbx --out-
 ```
 
 It writes `left_hand_rest_pose.urdf` and `right_hand_rest_pose.urdf` in `--out-dir` (default: current directory); use `--side left` or `--side right` for a single hand. The script warns if the bone values differ from the FBX bind pose or use FBX features it ignores (pivots, offsets, scaling).
+
+## Measure the DOF used by MANUS at each joint
+
+MANUS does not document the kinematic model of its raw skeleton (every node only has a full 3D orientation). [`code/analyze_manus_dofs.py`](code/analyze_manus_dofs.py) measures it from a MANUS Core CSV export of a recording with finger motion (one file per hand):
+
+```bash
+pixi run python ManusGlove/code/analyze_manus_dofs.py <FILE>_L.csv
+```
+
+For each joint it reports the rotation range about the node axes (X twist about the bone, Y flexion, Z spread), the principal components of the rotation (the number above `--min-deg`, default 1 deg, is the number of DOF used), whether the twist is independent or computed by MANUS from flexion and spread, and, for 1-DOF joints, the angle between the measured hinge and the node +Y axis. Only joints that move in the recording can be measured.
 
 ## Inspect a MANUS FBX export
 

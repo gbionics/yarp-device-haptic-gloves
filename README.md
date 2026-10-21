@@ -11,3 +11,13 @@ This repository contains the YARP device drivers for the following haptic gloves
 3. [``Eigen3``](https://eigen.tuxfamily.org/) 
 
 Additional dependencies are specified in the README of each glove in the corresponding folder.
+
+## Development environment with Pixi
+
+The root `pixi.toml` defines the dependencies used by the Manus CI workflow. Install them with:
+
+```bash
+pixi install
+```
+
+Run commands in the environment with `pixi run <command>`, or activate it with `pixi shell`.

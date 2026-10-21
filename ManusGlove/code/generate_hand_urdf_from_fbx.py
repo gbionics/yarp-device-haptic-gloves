@@ -10,8 +10,9 @@ enabled) does not depend on the pose the user had while recording. This script
 turns that pose into a URDF, so that joint angles equal to zero reproduce it.
 
 The FBX data are used as they are (no change to the pose). Links, joints, axes,
-sign conventions and limits are the same as in generate_hand_urdf.py, so the two
-URDFs are interchangeable; only the geometry source differs:
+sign conventions and limits are the same as in generate_hand_urdf.py (the FBX bone
+axes are only relabeled to the MANUS SDK convention: bone along +X, flexion about +Y),
+so the two URDFs are interchangeable; only the geometry source differs:
   * phalanx lengths: the user's (MANUS calibration), only if "Scale skeleton" was enabled;
   * metacarpals, palm and pose (finger bends, spread, thumb orientation): the target skeleton.
 See https://docs.manus-meta.com/3.2.0/Software/Rec/Exporting%20fbx/ for the export settings.
@@ -41,6 +42,11 @@ FINGERS = ("thumb", "index", "middle", "ring", "pinky")
 FINGER_SEGMENTS = (("metacarpal", "Metacarpal"), ("01", "Proximal"), ("02", "Intermediate"),
                    ("03", "Distal"), ("tip", "Tip"))
 THUMB_SEGMENTS = (("01", "Metacarpal"), ("02", "Proximal"), ("03", "Distal"), ("tip", "Tip"))
+# Rows: SDK node axes (bone +X, flexion hinge +Y, Z = X x Y) expressed in the FBX bone axes.
+FBX_TO_SDK_AXES = {
+    "l": [[1, 0, 0], [0, 0, 1], [0, -1, 0]],
+    "r": [[1, 0, 0], [0, 0, -1], [0, 1, 0]],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +175,9 @@ def hand_nodes(scene, side, warnings):
 
     bind = bind_pose_relative(scene)
     ids = {name: i for i, (name, *_rest) in enumerate(bones)}
+    # FBX bones flex about local Z (+Z on the left hand, -Z on the right hand); relabel the
+    # bone axes to the SDK raw-skeleton convention used by build_hand_urdf (bone +X, flexion +Y).
+    relabel_t = transpose(FBX_TO_SDK_AXES[side])
     world = {}
     nodes = []
     for name, chain, joint_type, parent in bones:
@@ -189,7 +198,7 @@ def hand_nodes(scene, side, warnings):
             "chain_type": chain,
             "finger_joint_type": joint_type,
             "position_xyz": tuple(w[i][3] * to_m for i in range(3)),
-            "rotation_wxyz": matrix_to_quat([r[:3] for r in w[:3]]),
+            "rotation_wxyz": matrix_to_quat(matmul([r[:3] for r in w[:3]], relabel_t)),
         })
     return nodes
 
