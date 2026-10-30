@@ -60,6 +60,9 @@ public:
 
     std::vector<double> humanJointState, humanJointStateDeg;
 
+    // Wrist orientation from the glove IMU
+    ManusQuaternion handOrientation = {1.0f, 0.0f, 0.0f, 0.0f};
+
     //Pointer to the glove object.
     std::unique_ptr<manusGlove::ManusGloveHelper> pGlove; /**< Pointer to the glove object. */
 
@@ -333,6 +336,8 @@ bool ManusGlove::ManusGloveImpl::update()
 
     pGlove->getHandJointPosition(humanJointStateDeg, handSide);
 
+    pGlove->getHandOrientation(handOrientation, handSide);
+
     //The first half of the humanJointState vector is for the modified joint values after applying the coupling matrix
     //The second part is for the raw joint values as received from the glove (in degrees)
     size_t numJoints = humanJointNameList.size();
@@ -499,7 +504,18 @@ public:
         // we do not handle position in the current implementation
         position = {0, 0, 0};
 
-        orientation = {0, 0, 0, 0};
+        if (sensorName == gloveImpl->linkSensorPrefix + gloveImpl->humanHandLinkName)
+        {
+            std::lock_guard<std::mutex> lock(gloveImpl->mutex);
+            const ManusQuaternion& q = gloveImpl->handOrientation;
+            // Quaternion representation follows the convention used by IWear consumer and producers
+            // i.e. the quaternion is represented as (w, x, y, z)
+            orientation = {q.w, q.x, q.y, q.z};
+        }
+        else
+        {
+            orientation = {0, 0, 0, 0};
+        }
 
         return true;
     }

@@ -243,6 +243,11 @@ public:
     */
     bool getHandRawSkeleton(std::vector<std::pair<std::string, Eigen::Matrix4f>>& p_SkeletonData, bool p_isRightHand);
 
+    /**
+    * Get the wrist orientation of a hand, as estimated by the glove IMU.
+    */
+    bool getHandOrientation(ManusQuaternion& p_Orientation, bool p_isRightHand);
+
     //===================================================================================================================================================================================
 
 protected:

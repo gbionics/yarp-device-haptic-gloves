@@ -87,7 +87,7 @@ bool ManusGloveHelper::Initialize(bool p_hostType, bool p_useManusCore)
         return false;
     }
 
-    if (CoreSdk_SetRawSkeletonHandMotion(HandMotion::HandMotion_None) != SDKReturnCode::SDKReturnCode_Success)
+    if (CoreSdk_SetRawSkeletonHandMotion(HandMotion::HandMotion_IMU) != SDKReturnCode::SDKReturnCode_Success)
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to set the raw skeleton hand motion.";
         return false;
@@ -407,6 +407,31 @@ bool manusGlove::ManusGloveHelper::getHandRawSkeleton(std::vector<std::pair<std:
         p_SkeletonData[i].second = ManusTransformToEigen(node.transform);
     }
     return true;
+}
+
+bool manusGlove::ManusGloveHelper::getHandOrientation(ManusQuaternion& p_Orientation, bool p_isRightHand)
+{
+    const RawClientSkeleton& t_RawSkeleton = p_isRightHand ? s_Instance->m_RightGloveRawSkeleton : s_Instance->m_LeftGloveRawSkeleton;
+    std::lock_guard<std::mutex> lock(p_isRightHand ? s_Instance->m_RightGloveRawSkeletonMutex : s_Instance->m_LeftGloveRawSkeletonMutex);
+    for (const auto& nodeInfo : t_RawSkeleton.nodeInfos)
+    {
+        // The wrist is the root of the raw skeleton, i.e. the node that is its own parent
+        // This check is taken from the Manus SDK example client.
+        if (nodeInfo.parentId != nodeInfo.nodeId)
+        {
+            continue;
+        }
+        for (const auto& node : t_RawSkeleton.nodes)
+        {
+            if (node.id == nodeInfo.nodeId)
+            {
+                p_Orientation = node.transform.rotation;
+                return true;
+            }
+        }
+        return false;
+    }
+    return false;
 }
 
 bool ManusGloveHelper::SetupHandNodes(uint32_t p_SklIndex)
