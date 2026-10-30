@@ -508,6 +508,8 @@ public:
         {
             std::lock_guard<std::mutex> lock(gloveImpl->mutex);
             const ManusQuaternion& q = gloveImpl->handOrientation;
+            // Quaternion representation follows the convention used by IWear consumer and producers
+            // i.e. the quaternion is represented as (w, x, y, z)
             orientation = {q.w, q.x, q.y, q.z};
         }
         else
