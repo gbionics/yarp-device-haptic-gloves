@@ -282,7 +282,7 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
         return false;
     }
 
-    if (!pGlove->WaitForGloveConnection(handSide, gloveConnectionTimeout))
+    if (gloveConnectionTimeout > 0.0 && !pGlove->WaitForGloveConnection(handSide, gloveConnectionTimeout))
     {
         yError() << LogPrefix << "No glove connected on the" << handSideLogPrefix << "hand.";
         pGlove->ShutDown();
