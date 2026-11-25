@@ -56,21 +56,25 @@ bool ManusGloveHelper::Initialize(bool p_hostType, bool p_useManusCore)
         return false;
     }
 
+    // From here on, the SDK is initialized: shut it down on failure, so that it can be initialized again later.
     if (CoreSdk_SetSessionType(SessionType::SessionType_CoreSDK) != SDKReturnCode::SDKReturnCode_Success)
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to set the session type.";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (!RegisterAllCallbacks())
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to register all the callbacks.";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (!InitializeCoordinateSystem())
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to initialize coordinate system.";
+        CoreSdk_ShutDown();
         return false;
     }
 
@@ -78,18 +82,21 @@ bool ManusGloveHelper::Initialize(bool p_hostType, bool p_useManusCore)
     if(!LookingForHosts(m_ShouldConnectLocally))
     {
         yError() << ManusGlove_LogPrefix << "Failed to initilize. Check the hosts";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (!ConnectingToCore())
     {
         yError() << ManusGlove_LogPrefix << "Failed to connect to the core.";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (CoreSdk_SetRawSkeletonHandMotion(HandMotion::HandMotion_IMU) != SDKReturnCode::SDKReturnCode_Success)
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to set the raw skeleton hand motion.";
+        CoreSdk_ShutDown();
         return false;
     }
 
@@ -617,12 +624,11 @@ bool ManusGloveHelper::LookingForHosts(bool p_hostType)
 
     if (m_NumberOfHostsFound == 0)
     {
-        yWarning() << ManusGlove_LogPrefix << "No hosts found.";
+        yError() << ManusGlove_LogPrefix << "No Manus host found. If using Manus Core (use_manus_core = true), make sure that Manus Core is running.";
+        return false;
     }
-    else
-    {
-        yInfo() << ManusGlove_LogPrefix << "Found " << m_NumberOfHostsFound << " available hosts.";
-    }
+
+    yInfo() << ManusGlove_LogPrefix << "Found " << m_NumberOfHostsFound << " available hosts.";
 
     m_AvailableHosts.reset(new ManusHost[m_NumberOfHostsFound]);
     if (CoreSdk_GetAvailableHostsFound(m_AvailableHosts.get(), m_NumberOfHostsFound) != SDKReturnCode::SDKReturnCode_Success)
@@ -636,6 +642,12 @@ bool ManusGloveHelper::LookingForHosts(bool p_hostType)
 
 bool ManusGloveHelper::ConnectingToCore()
 {
+    if (m_NumberOfHostsFound == 0 || m_AvailableHosts == nullptr)
+    {
+        yError() << ManusGlove_LogPrefix << "No Manus host available to connect to.";
+        return false;
+    }
+
     yInfo() << ManusGlove_LogPrefix << "Found the following hosts: ";
 
     // Note: only 10 hosts are shown, to match the number of number keys, for easy selection.
@@ -1153,6 +1165,47 @@ bool ManusGloveHelper::CopyString(char *const p_Target, const size_t p_MaxLength
     }
     std::strncpy(p_Target, p_Source.c_str(), p_MaxLengthThatWillFitInTarget);
     return true;
+}
+
+bool ManusGloveHelper::WaitForGloveConnection(bool p_isRightHand, double p_TimeoutSeconds)
+{
+    if (s_Instance == nullptr)
+    {
+        yError() << ManusGlove_LogPrefix << "No ManusGloveHelper instance available.";
+        return false;
+    }
+
+    const Side t_Side = p_isRightHand ? Side::Side_Right : Side::Side_Left;
+    const double t_Start = yarp::os::Time::now();
+    uint32_t t_DongleCount = 0;
+    uint32_t t_GloveCount = 0;
+
+    do
+    {
+        {
+            std::lock_guard<std::mutex> lock(s_Instance->m_LandscapeMutex);
+            const Landscape* t_Landscape = s_Instance->m_NewLandscape != nullptr ? s_Instance->m_NewLandscape : s_Instance->m_Landscape;
+            if (t_Landscape != nullptr)
+            {
+                t_DongleCount = t_Landscape->gloveDevices.dongleCount;
+                t_GloveCount = t_Landscape->gloveDevices.gloveCount;
+                for (uint32_t i = 0; i < t_GloveCount; i++)
+                {
+                    if (t_Landscape->gloveDevices.gloves[i].side == t_Side)
+                    {
+                        yInfo() << ManusGlove_LogPrefix << "Found" << ConvertSideToString(t_Side) << "glove with ID" << t_Landscape->gloveDevices.gloves[i].id;
+                        return true;
+                    }
+                }
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    } while (yarp::os::Time::now() - t_Start < p_TimeoutSeconds);
+
+    yError() << ManusGlove_LogPrefix << "No" << ConvertSideToString(t_Side) << "glove detected within" << p_TimeoutSeconds
+             << "seconds (dongles found:" << t_DongleCount << ", gloves found:" << t_GloveCount
+             << "). Check that the dongle is plugged in and the glove is turned on and paired.";
+    return false;
 }
 
 bool ManusGloveHelper::getHandJointPosition(std::vector<double>& jointAngleList, bool p_isRightHand)
