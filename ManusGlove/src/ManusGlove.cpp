@@ -274,10 +274,18 @@ bool ManusGlove::ManusGloveImpl::open(yarp::os::Searchable& config)
     publishRawData = config.check("publish_raw_data", yarp::os::Value(false)).asBool();
     yInfo() << LogPrefix << "publish_raw_data: " << (publishRawData ? "true" : "false");
 
-// TODO: Add a check if there is no glove connected!
+    const double gloveConnectionTimeout = config.check("glove_connection_timeout", yarp::os::Value(5.0)).asFloat64();
+
     if (!pGlove->Initialize(hostType, useManusCore))
     {
         yError() << LogPrefix << "Failed to initialize the ManusGloveHelper on the" << handSideLogPrefix << "hand.";
+        return false;
+    }
+
+    if (!pGlove->WaitForGloveConnection(handSide, gloveConnectionTimeout))
+    {
+        yError() << LogPrefix << "No glove connected on the" << handSideLogPrefix << "hand.";
+        pGlove->ShutDown();
         return false;
     }
     yInfo() << LogPrefix << "ManusGloveHelper initialized successfully on the" << handSideLogPrefix << "hand.";

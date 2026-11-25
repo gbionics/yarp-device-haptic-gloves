@@ -248,6 +248,14 @@ public:
     */
     bool getHandOrientation(ManusQuaternion& p_Orientation, bool p_isRightHand);
 
+    /**
+     * Waits until a glove of the requested side appears in the Manus landscape.
+     * @param p_isRightHand - true: Right hand, false: Left hand
+     * @param p_TimeoutSeconds - maximum time to wait
+     * @return true if a glove of the requested side is detected before the timeout
+     */
+    bool WaitForGloveConnection(bool p_isRightHand, double p_TimeoutSeconds);
+
     //===================================================================================================================================================================================
 
 protected:

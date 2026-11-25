@@ -1155,6 +1155,47 @@ bool ManusGloveHelper::CopyString(char *const p_Target, const size_t p_MaxLength
     return true;
 }
 
+bool ManusGloveHelper::WaitForGloveConnection(bool p_isRightHand, double p_TimeoutSeconds)
+{
+    if (s_Instance == nullptr)
+    {
+        yError() << ManusGlove_LogPrefix << "No ManusGloveHelper instance available.";
+        return false;
+    }
+
+    const Side t_Side = p_isRightHand ? Side::Side_Right : Side::Side_Left;
+    const double t_Start = yarp::os::Time::now();
+    uint32_t t_DongleCount = 0;
+    uint32_t t_GloveCount = 0;
+
+    do
+    {
+        {
+            std::lock_guard<std::mutex> lock(s_Instance->m_LandscapeMutex);
+            const Landscape* t_Landscape = s_Instance->m_NewLandscape != nullptr ? s_Instance->m_NewLandscape : s_Instance->m_Landscape;
+            if (t_Landscape != nullptr)
+            {
+                t_DongleCount = t_Landscape->gloveDevices.dongleCount;
+                t_GloveCount = t_Landscape->gloveDevices.gloveCount;
+                for (uint32_t i = 0; i < t_GloveCount; i++)
+                {
+                    if (t_Landscape->gloveDevices.gloves[i].side == t_Side)
+                    {
+                        yInfo() << ManusGlove_LogPrefix << "Found" << ConvertSideToString(t_Side) << "glove with ID" << t_Landscape->gloveDevices.gloves[i].id;
+                        return true;
+                    }
+                }
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    } while (yarp::os::Time::now() - t_Start < p_TimeoutSeconds);
+
+    yError() << ManusGlove_LogPrefix << "No" << ConvertSideToString(t_Side) << "glove detected within" << p_TimeoutSeconds
+             << "seconds (dongles found:" << t_DongleCount << ", gloves found:" << t_GloveCount
+             << "). Check that the dongle is plugged in and the glove is turned on and paired.";
+    return false;
+}
+
 bool ManusGloveHelper::getHandJointPosition(std::vector<double>& jointAngleList, bool p_isRightHand)
 {
 
