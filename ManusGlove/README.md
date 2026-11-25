@@ -117,5 +117,29 @@ You can launch:
 yarprobotinterface --config ManusGlove.xml
 ```
 
+### Parameters
+The `ManusGlove` device accepts the following parameters:
+
+| Parameter | Required | Default | Description |
+|---|---|---|---|
+| `period` | No | `0.01` | Period (in seconds) of the device thread reading the glove data. |
+| `wearableName` | No | `ManusGlove` | Name of the wearable, used as prefix for the sensor names. |
+| `is_right_hand` | Yes | - | `true` for the right hand glove, `false` for the left one. |
+| `is_local_host` | Yes | - | If `true`, look for a Manus host only on the local machine, otherwise on the whole network. |
+| `use_manus_core` | No | `true` | If `true`, connect to a running Manus Core; if `false`, use the Manus SDK in Integrated mode (no Manus Core needed, e.g. on Linux). |
+| `glove_connection_timeout` | No | `5.0` | Maximum time (in seconds) to wait for the glove to be detected, otherwise the device fails to open. A value `<= 0` skips the check. |
+| `publish_raw_data` | No | `false` | If `true`, also publish the raw glove joint values (in degrees, before coupling matrix and offset) as additional joint sensors with the `raw_deg` prefix. |
+| `human_joint_list` | Yes | - | List of the human hand joint names to publish (e.g. `l_index_proximal`, `r_thumb_oppose`). |
+| `human_finger_list` | Yes | - | List of the human finger names, used to publish a fingertip link sensor for each finger. |
+| `hand_link` | Yes | - | Name of the human hand link, whose orientation is estimated by the glove IMU. |
+| `min_joint_limit_deg` | Yes | - | Lower joint limits (in degrees), one per joint in `human_joint_list`. |
+| `max_joint_limit_deg` | Yes | - | Upper joint limits (in degrees), one per joint in `human_joint_list`. |
+| `coupling_matrix` | Yes | - | Row-major square matrix (size equal to the number of joints) applied to the raw joint values. |
+| `offset_vector_deg` | Yes | - | Offset (in degrees) added to the joint values after applying the coupling matrix, one per joint. |
+| `palm_frame_name` | No | `""` | Name of the palm frame used to publish the finger transforms through the attached `frameTransformClient`. If empty, no transform is published. |
+| `palm_transform` | No | identity | Row-major 4x4 homogeneous transform applied to the finger transforms before publishing them in `palm_frame_name`. |
+
+> [!NOTE]
+> When opening the device, the process opening it blocks until a glove is detected or `glove_connection_timeout` expires, and it cannot be interrupted.
 
 
