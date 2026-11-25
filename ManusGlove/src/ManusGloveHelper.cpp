@@ -56,21 +56,25 @@ bool ManusGloveHelper::Initialize(bool p_hostType, bool p_useManusCore)
         return false;
     }
 
+    // From here on, the SDK is initialized: shut it down on failure, so that it can be initialized again later.
     if (CoreSdk_SetSessionType(SessionType::SessionType_CoreSDK) != SDKReturnCode::SDKReturnCode_Success)
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to set the session type.";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (!RegisterAllCallbacks())
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to register all the callbacks.";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (!InitializeCoordinateSystem())
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to initialize coordinate system.";
+        CoreSdk_ShutDown();
         return false;
     }
 
@@ -78,18 +82,21 @@ bool ManusGloveHelper::Initialize(bool p_hostType, bool p_useManusCore)
     if(!LookingForHosts(m_ShouldConnectLocally))
     {
         yError() << ManusGlove_LogPrefix << "Failed to initilize. Check the hosts";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (!ConnectingToCore())
     {
         yError() << ManusGlove_LogPrefix << "Failed to connect to the core.";
+        CoreSdk_ShutDown();
         return false;
     }
 
     if (CoreSdk_SetRawSkeletonHandMotion(HandMotion::HandMotion_IMU) != SDKReturnCode::SDKReturnCode_Success)
     {
         yError() << ManusGlove_LogPrefix << "SDK::Failed to set the raw skeleton hand motion.";
+        CoreSdk_ShutDown();
         return false;
     }
 
@@ -617,12 +624,11 @@ bool ManusGloveHelper::LookingForHosts(bool p_hostType)
 
     if (m_NumberOfHostsFound == 0)
     {
-        yWarning() << ManusGlove_LogPrefix << "No hosts found.";
+        yError() << ManusGlove_LogPrefix << "No Manus host found. If using Manus Core (use_manus_core = true), make sure that Manus Core is running.";
+        return false;
     }
-    else
-    {
-        yInfo() << ManusGlove_LogPrefix << "Found " << m_NumberOfHostsFound << " available hosts.";
-    }
+
+    yInfo() << ManusGlove_LogPrefix << "Found " << m_NumberOfHostsFound << " available hosts.";
 
     m_AvailableHosts.reset(new ManusHost[m_NumberOfHostsFound]);
     if (CoreSdk_GetAvailableHostsFound(m_AvailableHosts.get(), m_NumberOfHostsFound) != SDKReturnCode::SDKReturnCode_Success)
@@ -636,6 +642,12 @@ bool ManusGloveHelper::LookingForHosts(bool p_hostType)
 
 bool ManusGloveHelper::ConnectingToCore()
 {
+    if (m_NumberOfHostsFound == 0 || m_AvailableHosts == nullptr)
+    {
+        yError() << ManusGlove_LogPrefix << "No Manus host available to connect to.";
+        return false;
+    }
+
     yInfo() << ManusGlove_LogPrefix << "Found the following hosts: ";
 
     // Note: only 10 hosts are shown, to match the number of number keys, for easy selection.
